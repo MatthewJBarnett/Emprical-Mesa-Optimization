@@ -27,7 +27,7 @@ class Gridworld:
 
 class Direction:
 	"""
-	The available actions in an agent in gridworld
+	Defines the available actions for an agent in gridworld
     """
 	NORTH = (0, -1)
 	SOUTH = (0, 1)
