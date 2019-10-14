@@ -79,7 +79,7 @@ class ChestsAndKeys(Gridworld):
 		self.keys_in_inventory = 0
 		self.drawing = drawing
 		if drawing:
-			SCREEN_DIMENSIONS = (800, 800)
+			SCREEN_DIMENSIONS = (800, 840)
 			self.game_display = pygame.display.set_mode(SCREEN_DIMENSIONS)
 			pygame.display.set_caption('Keys and Chests Gridworld')
 			self.sprite_size = int(SCREEN_DIMENSIONS[0] / max(dimensions))
@@ -94,6 +94,8 @@ class ChestsAndKeys(Gridworld):
 			self.agent_sprite = pygame.transform.scale(pygame.image.load('Resources/agent.png'), \
 					(self.sprite_size, self.sprite_size))
 			self.tile_to_sprite = [self.floor_sprite, self.wall_sprite, self.chest_sprite, self.key_sprite]
+			pygame.font.init()
+			self.font = pygame.font.Font("Resources/FreeSans.ttf", 30)
 	
 	def generate_maze(self):
 		""" Generates a maze by using the tree yielded by randomized depth-first search """		
@@ -177,9 +179,11 @@ class ChestsAndKeys(Gridworld):
 		for x in range(self.dimensions[0]):
 			for y in range(self.dimensions[1]):
 				self.game_display.blit(self.tile_to_sprite[self.tiles[x][y]], \
-						(x * self.sprite_size, y * self.sprite_size))
+						(x * self.sprite_size, y * self.sprite_size + 40))
 		self.game_display.blit(self.agent_sprite, \
-			(self.agent_pos[0] * self.sprite_size, self.agent_pos[1] * self.sprite_size))
+			(self.agent_pos[0] * self.sprite_size, self.agent_pos[1] * self.sprite_size + 40))
+		text = self.font.render("Number of keys: " + str(self.keys_in_inventory), True, (0, 128, 0))
+		self.game_display.blit(text, (0, 0))
 		pygame.display.flip()
 	
 	def exit_drawing(self):
