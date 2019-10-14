@@ -1,9 +1,9 @@
 import Gridworld
 
-world = Gridworld.ChestsAndKeys((13, 13), 5, 5)
+world = Gridworld.ChestsAndKeys((13, 13), 5, 5, drawing = True)
 line_in = ""
 while line_in != "quit":
-	world.print_out()
+	world.draw()
 	print()
 	print("Enter 0 - 4 for (North, East, South, West, Stay) respectively")
 	print("Or enter 'quit' to exit")
@@ -15,4 +15,6 @@ while line_in != "quit":
 			print()
 			print("Agent got ", reward, " reward")
 			print()
+
+world.exit_drawing()
 
