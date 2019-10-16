@@ -1,6 +1,6 @@
 import Gridworld
 
-world = Gridworld.ChestsAndKeys((13, 13), 5, 5, drawing = True)
+world = Gridworld.ChestsAndKeys((9, 9), 10, 3, drawing = True)
 line_in = ""
 while line_in != "quit":
 	world.draw()

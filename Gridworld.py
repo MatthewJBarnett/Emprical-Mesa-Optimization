@@ -1,6 +1,8 @@
 import random
 import pygame
 
+# Apologies, right now there are some magic numbers and some oddly written code
+
 class Gridworld:
 	""" 
 	Defines a generic gridworld. A gridworld environment is literally a grid
@@ -83,16 +85,14 @@ class ChestsAndKeys(Gridworld):
 			self.game_display = pygame.display.set_mode(SCREEN_DIMENSIONS)
 			pygame.display.set_caption('Keys and Chests Gridworld')
 			self.sprite_size = int(SCREEN_DIMENSIONS[0] / max(dimensions))
-			self.key_sprite = pygame.transform.scale(pygame.image.load('Resources/key.png'), \
-					(self.sprite_size, self.sprite_size))
-			self.chest_sprite = pygame.transform.scale(pygame.image.load('Resources/chest.png'), \
-					(self.sprite_size, self.sprite_size))
-			self.wall_sprite = pygame.transform.scale(pygame.image.load('Resources/wall.png'), \
-					(self.sprite_size, self.sprite_size))
-			self.floor_sprite = pygame.transform.scale(pygame.image.load('Resources/floor.png'), \
-					(self.sprite_size, self.sprite_size))
-			self.agent_sprite = pygame.transform.scale(pygame.image.load('Resources/agent.png'), \
-					(self.sprite_size, self.sprite_size))
+			def load(name):
+				return pygame.transform.scale(pygame.image.load('Resources/' + name), \
+								(self.sprite_size, self.sprite_size))
+			self.key_sprite = load('key.png')
+			self.chest_sprite = load('chest.png')
+			self.wall_sprite = load('wall.png')
+			self.floor_sprite = load('floor.png')
+			self.agent_sprite = load('agent.png')
 			self.tile_to_sprite = [self.floor_sprite, self.wall_sprite, self.chest_sprite, self.key_sprite]
 			pygame.font.init()
 			self.font = pygame.font.Font("Resources/FreeSans.ttf", 30)
@@ -100,21 +100,21 @@ class ChestsAndKeys(Gridworld):
 	def generate_maze(self):
 		""" Generates a maze by using the tree yielded by randomized depth-first search """		
 		def dfs():
-			stack = [(0, 0)]
+			stack = [((0, 0), (0, 0))]
+			pos = (0, 0)
 			while len(stack) > 0:
-				pos = stack.pop()
-				directions = Direction.legal_directions(pos, self.dimensions, jumpsize = 2)
-				while len(directions) > 0:
-					index = random.randint(0, len(directions) - 1)
-					d = directions[index] # Choose a random direction to explore
-					child = Direction.add(pos, d)
-					if self.tiles[child[0]][child[1]] == 0:
-						stack += [child]
-						self.tiles[child[0]][child[1]] = -1 # Mark node as explored
-						mod = (int((child[0] - pos[0]) / 2) + pos[0], int((child[1] - pos[1]) / 2) + pos[1])
-						self.tiles[mod[0]][mod[1]] = -1 # Mark the edge as explored too
-					else:
-						directions.remove(d)
+				old_pos = pos
+				pos, prev_dir = stack.pop()
+				if self.tiles[pos[0]][pos[1]] == 0:
+					self.tiles[pos[0]][pos[1]] = -1 # Mark node as explored
+					directions = Direction.legal_directions(pos, self.dimensions, jumpsize = 2)
+					while len(directions) > 0:
+						index = random.randint(0, len(directions) - 1)
+						random_dir = directions[index] # Choose a random direction to explore
+						stack += [(Direction.add(pos, random_dir), Direction.multiply(random_dir, -0.5))]
+						directions.remove(random_dir)
+					mod = Direction.add(pos, prev_dir)
+					self.tiles[mod[0]][mod[1]] = -1 # Mark the connecting edge as explored too
 						
 		dfs()
 		
@@ -149,18 +149,15 @@ class ChestsAndKeys(Gridworld):
 		""" Takes an action, if possible, and returns a (state, reward) pair """
 		direction = Direction.DIRECTION_TO_INDEX[action]
 		new_pos = (self.agent_pos[0] + action[0], self.agent_pos[1] + action[1])
-		
 		# If the agent takes an illegal action, stay in the current position
 		if not (action in Direction.legal_directions(self.agent_pos, self.dimensions, jumpsize = 1)):
 			return (self.state(), 0.0)
-		
 		# If the agent runs into a wall, stay in the current position	
 		stepped_on_tile = self.tiles[new_pos[0]][new_pos[1]]
 		if stepped_on_tile == 1:
 			return (self.state(), 0.0)
-			
-		self.agent_pos = new_pos
 		
+		self.agent_pos = new_pos
 		# If the agent steps on a chest and has at least one key, reward the agent
 		if stepped_on_tile == 2 and self.keys_in_inventory > 0:
 				self.keys_in_inventory -= 1
