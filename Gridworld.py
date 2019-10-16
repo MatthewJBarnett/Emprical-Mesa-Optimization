@@ -118,6 +118,7 @@ class ChestsAndKeys(Gridworld):
 						
 		dfs()
 		
+		# Go back and make everything that wasn't marked a -1 as a wall
 		for x in range(self.dimensions[0]):
 			for y in range(self.dimensions[1]):
 				if self.tiles[x][y] != -1:
@@ -149,20 +150,24 @@ class ChestsAndKeys(Gridworld):
 		""" Takes an action, if possible, and returns a (state, reward) pair """
 		direction = Direction.DIRECTION_TO_INDEX[action]
 		new_pos = (self.agent_pos[0] + action[0], self.agent_pos[1] + action[1])
+		
 		# If the agent takes an illegal action, stay in the current position
 		if not (action in Direction.legal_directions(self.agent_pos, self.dimensions, jumpsize = 1)):
 			return (self.state(), 0.0)
+			
 		# If the agent runs into a wall, stay in the current position	
 		stepped_on_tile = self.tiles[new_pos[0]][new_pos[1]]
 		if stepped_on_tile == 1:
 			return (self.state(), 0.0)
 		
 		self.agent_pos = new_pos
+		
 		# If the agent steps on a chest and has at least one key, reward the agent
 		if stepped_on_tile == 2 and self.keys_in_inventory > 0:
 				self.keys_in_inventory -= 1
 				self.tiles[new_pos[0]][new_pos[1]] = 0
 				return (self.state(), 1.0)
+				
 		# If the agent steps on a key, add it to its inventory
 		elif stepped_on_tile == 3:
 			self.keys_in_inventory += 1
