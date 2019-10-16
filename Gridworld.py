@@ -41,12 +41,12 @@ class Direction:
 	DIRECTION_TO_INDEX = {a:i for i, a in enumerate(INDEX_TO_DIRECTION)}
 	
 	def add(v1, v2):
-		""" Add two vectors (with integer coordinates)"""
-		return (int(v1[0] + v2[0]), int(v1[1] + v2[1]))
+		""" Add two vectors"""
+		return (v1[0] + v2[0], v1[1] + v2[1])
 	
 	def multiply(v, scalar):
-		""" Multiply a vector by a scalar (with integer coordinates)"""
-		return (int(v[0] * scalar), int(v[1] * scalar))
+		""" Multiply a vector by a scalar"""
+		return (v[0] * scalar, v[1] * scalar)
 	
 	def legal_directions(v, dimensions, jumpsize = 1):
 		""" Returns the legal directions at a tile, given the coordinates of the box
@@ -114,7 +114,7 @@ class ChestsAndKeys(Gridworld):
 						stack += [(Direction.add(pos, random_dir), Direction.multiply(random_dir, -0.5))]
 						directions.remove(random_dir)
 					mod = Direction.add(pos, prev_dir)
-					self.tiles[mod[0]][mod[1]] = -1 # Mark the connecting edge as explored too
+					self.tiles[int(mod[0])][int(mod[1])] = -1 # Mark the connecting edge as explored too
 						
 		dfs()
 		
