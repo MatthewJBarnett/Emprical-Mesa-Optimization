@@ -20,7 +20,7 @@ for i in range(12000):
 '''
 # This is a demo for reading in the training data and outputting the first points
 # I'll need to figure out how to embed the training data (that's the next step of the project)	
-'''
-for i in range(10):
-	print(Utilities.get_samples_from("training.dat", (5, 5))[i])
-'''
+samples = Utilities.get_samples_from("training.dat", (5, 5))
+for i in range(100):
+	print(samples[i])
+

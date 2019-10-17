@@ -34,6 +34,9 @@ class Gridworld:
 class Direction:
 	"""
 	Defines the available actions for an agent in gridworld
+	Some of this code is copied from 
+	https://github.com/HumanCompatibleAI/learning_biases/blob/master/gridworld.py
+	The next thing to do here is import the class from that file since it's better anyway
     """
 	NORTH = (0, -1)
 	SOUTH = (0, 1)

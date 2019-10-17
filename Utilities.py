@@ -1,4 +1,5 @@
 import Agent
+import numpy as np
 
 # This file mainly includes utilities for writing training data to files, and reading that data
 # The intention here is to map states to actions, and build a supervised learner as a first test
@@ -47,7 +48,7 @@ def get_samples_from(filename, grid_dimensions):
 		keys = int(lines[i + grid_dimensions[1] + 2].replace('\n', ''))
 		
 		action_index = int(lines[i + grid_dimensions[1] + 3].replace('\n', ''))
-		
+		grid = np.array(grid).T.tolist()
 		pairs.append(((grid, agent_pos, keys), action_index))
 		
 	f.close()
