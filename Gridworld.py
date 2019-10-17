@@ -2,6 +2,9 @@ import random
 import pygame
 
 # Apologies, right now there are some magic numbers and some oddly written code
+# On the agenda are
+# 1. Making the indexing look less terrible in some parts
+# 2. Making the code more self explanatory
 
 class Gridworld:
 	""" 
@@ -61,6 +64,18 @@ class Direction:
 		if v[1] + jumpsize < dimensions[1]:
 			directions += [Direction.multiply(Direction.SOUTH, jumpsize)]
 		return directions
+		
+	def free_directions(pos, grid):
+		""" Returns the directions that you can move to for a given position on a grid 
+		This is specific to gridworlds only"""
+		
+		potential = Direction.legal_directions(pos, (len(grid[0]), len(grid)))
+		free = []
+		for d in potential:
+			adjacent = Direction.add(pos, d)
+			if grid[adjacent[0]][adjacent[1]] != 1:
+				free.append(d)
+		return free
 
 class ChestsAndKeys(Gridworld):
 	"""
@@ -141,28 +156,32 @@ class ChestsAndKeys(Gridworld):
 			rand_y = random.randint(0, self.dimensions[1] - 1)
 			if self.tiles[rand_x][rand_y] == 0:
 				return (rand_x, rand_y)
+	
+	def item_count(self, item_index):
+		""" Counts the number of items on the grid right now given the item index """
+		count = 0
+		for x in range(self.dimensions[0]):
+			for y in range(self.dimensions[1]):
+				if self.tiles[x][y] == item_index:
+					count += 1
+		return count
 					
 	def state(self):
 		""" Returns the state of the gridworld, which is a (environment, agent_pos, keys) tuple """
 		return (self.peek(), self.agent_pos, self.keys_in_inventory)
-	
+		
 	def take_action(self, action):
 		""" Takes an action, if possible, and returns a (state, reward) pair """
-		direction = Direction.DIRECTION_TO_INDEX[action]
-		new_pos = (self.agent_pos[0] + action[0], self.agent_pos[1] + action[1])
+		new_pos = Direction.add(self.agent_pos, action)
 		
 		# If the agent takes an illegal action, stay in the current position
-		if not (action in Direction.legal_directions(self.agent_pos, self.dimensions, jumpsize = 1)):
-			return (self.state(), 0.0)
-			
-		# If the agent runs into a wall, stay in the current position	
-		stepped_on_tile = self.tiles[new_pos[0]][new_pos[1]]
-		if stepped_on_tile == 1:
+		if action not in Direction.free_directions(self.agent_pos, self.tiles):
 			return (self.state(), 0.0)
 		
 		self.agent_pos = new_pos
 		
 		# If the agent steps on a chest and has at least one key, reward the agent
+		stepped_on_tile = self.tiles[new_pos[0]][new_pos[1]]
 		if stepped_on_tile == 2 and self.keys_in_inventory > 0:
 				self.keys_in_inventory -= 1
 				self.tiles[new_pos[0]][new_pos[1]] = 0
