@@ -1,4 +1,5 @@
-from Gridworld import Direction, ChestsAndKeys
+from Environment.envs.Gridworld import Direction, ChestsAndKeys
+import numpy as np
 
 class Agent:
 	"""
@@ -76,7 +77,16 @@ class Agent:
 		# Return A* function with a Manhattan distance heuristic
 		return a_star(start, end, lambda pos: abs(pos[0] - end[0]) + abs(pos[1] - end[0]))
 				
-				
+class NeuralNetAgent(Agent):
+	def __init__(self, state, neural_network):
+		super().__init__(state[0])
+		self.model = neural_network
+	
+	def action(self, state):
+		""" Takes an action using the models prediction of the best action """
+		prediction = self.model.predict(ChestsAndKeys.embed(state))
+		return np.random.choice(5, size = 1, p = prediction)[0]
+		
 class HeuristicAgent(Agent):
 	"""
 	Defines an agent that takes the strategy recommended by a particular implementation 

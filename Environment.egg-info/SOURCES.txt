@@ -1,0 +1,7 @@
+README.md
+setup.py
+Environment.egg-info/PKG-INFO
+Environment.egg-info/SOURCES.txt
+Environment.egg-info/dependency_links.txt
+Environment.egg-info/requires.txt
+Environment.egg-info/top_level.txt

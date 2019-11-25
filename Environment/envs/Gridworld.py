@@ -1,5 +1,6 @@
 import random
 import pygame
+import time
 
 # Apologies, right now there are some magic numbers and some oddly written code
 # On the agenda are
@@ -193,7 +194,7 @@ class ChestsAndKeys(Gridworld):
 		
 		# If the agent takes an illegal action, stay in the current position
 		if action not in Direction.free_directions(self.agent_pos, self.tiles):
-			return (self.state(), 0.0)
+			return (self.state(), -0.05)
 		
 		self.agent_pos = new_pos
 		
@@ -244,8 +245,9 @@ class ChestsAndKeys(Gridworld):
 		agent_grid = [[0 for i in row] for row in state[0]]
 		agent_grid[state[1][0]][state[1][1]] = 1
 		agent_grid = np.array(agent_grid)
-		
-		return np.concatenate((wall_grid, chest_grid, key_grid, agent_grid), axis=0)
+		image = np.concatenate((wall_grid, chest_grid, key_grid, agent_grid), axis=0)
+		image = image.reshape(image.shape[0], image.shape[1], 1)
+		return image
 		
 	def print_out(self):
 		""" Prints the state of the grid and agent to console """
@@ -259,22 +261,41 @@ class ChestsAndKeys(Gridworld):
 			print(line)
 		print("Agent is at ", self.agent_pos)
 		print("Number of keys: ", self.keys_in_inventory)
-		
+			
 import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
+from stable_baselines.common.vec_env import VecEnv
+
+size_of_map = 5
 
 class ChestAndKeysEnv(gym.Env, ChestsAndKeys):
-  metadata = {'render.modes': ['human']}
-
-  def __init__(self):
-	super.__init__((7, 7), 3, 7)
-  def step(self, action):
-	return super.take_action(action)
-  def reset(self):
-	super.__init__((7, 7), 3, 7)
-  def render(self, mode='human'):
-	super.draw()
-  def close(self):
-	super.exit_drawing()
-			
+	metadata = {'render.modes': ['human']}
+	def __init__(self):
+		super().__init__((size_of_map, size_of_map), 3, 2, False)
+		self.num_steps = 0
+		self.total_reward = 0		
+		size_of_obs = (size_of_map * 4, size_of_map, 1)
+		self.observation_space = spaces.Box(low=0.0, high=3.0, shape=size_of_obs)
+		self.action_space = spaces.Discrete(4)
+	def _step(self, action):
+		self.num_steps += 1
+		state, reward = super().take_action(Direction.get_direction_from_number(action))
+		self.total_reward += reward
+		image = self.embed(state)
+		#print(state.shape)
+		#self.draw()
+		return image, reward, self.num_steps > 20, {}
+	def _reset(self, draw = False):
+		super().__init__((size_of_map, size_of_map), 3, 2, draw)
+		self.num_steps = 0
+		#print(self.total_reward)
+		self.total_reward = 0
+		return self.embed(self.state())
+	def _render(self, mode='human'):
+		super.draw()
+	def _close(self):
+		super.exit_drawing()
+	def _seed(self):
+		return 0
+		

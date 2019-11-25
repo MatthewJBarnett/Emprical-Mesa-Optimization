@@ -48,7 +48,7 @@ def get_samples_from(filename, grid_dimensions):
 		keys = int(lines[i + grid_dimensions[1] + 2].replace('\n', ''))
 		
 		action_index = int(lines[i + grid_dimensions[1] + 3].replace('\n', ''))
-		grid = np.array(grid).T.tolist()
+		grid = np.array(grid).tolist()
 		pairs.append(((grid, agent_pos, keys), action_index))
 		
 	f.close()

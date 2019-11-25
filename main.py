@@ -1,8 +1,42 @@
-import Gridworld
-import Agent
+import Environment.envs.Gridworld
+#import Agent
 import time
 import Utilities
 
+import gym
+from stable_baselines.common.policies import MlpPolicy, CnnPolicy
+from stable_baselines.common.vec_env import DummyVecEnv
+from stable_baselines import PPO1
+
+env = gym.make('CK-v0')
+
+model = PPO1(MlpPolicy, env, verbose=0)
+print("Training")
+model.learn(total_timesteps=500000)
+model.save("CK-CNN-1")
+
+obs = env.reset(True)
+for i in range(25):
+    action, states = model.predict(obs)
+    obs, rewards, dones, info = env.step(action)
+    env.draw()
+    time.sleep(1.0)
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 # This generates training data right now
 # Later I'll make a specialized function for it
 '''
@@ -18,9 +52,38 @@ for i in range(12000):
 		if world.item_count(3) < 1:
 			break
 '''
-# This is a demo for reading in the training data and outputting the first points
-# I'll need to figure out how to embed the training data (that's the next step of the project)	
-samples = Utilities.get_samples_from("training.dat", (5, 5))
-for i in range(100):
-	print(samples[i])
+'''
+# This currently gets samples from 'training.dat' and trains a neural network to predict labels
+from sklearn.model_selection import train_test_split
+import numpy as np
 
+samples = Utilities.get_samples_from("training.dat", (5, 5))
+
+points = [Gridworld.ChestsAndKeys.embed(sample[0]) for sample in samples]
+X = np.array(points)
+y = np.array([label[1] for label in samples])
+
+X = X.reshape(X.shape[0],X.shape[1],X.shape[2],1)
+b = np.zeros((y.shape[0], 5))
+b[np.arange(y.shape[0]), y] = 1
+y = b
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, random_state=42)
+
+ConvNet = NeuralNetwork.Convolutional(num_filters=100, filter_dimensions=(3,3), input_shape=(20,5,1), pooling_shape=(2,2), dense_shape=512, num_categories=5)
+
+print(X_train.shape)
+print(y_train.shape)
+ConvNet.train(X_train, y_train)
+ConvNet.save("model.h5")
+
+#print(ConvNet.predict(X_test[0:10]), y_test[0:10])
+
+world = Gridworld.ChestsAndKeys((5, 5), 2, 3, drawing = True)
+agent = Agent.NeuralNetAgent(world.state(), ConvNet)
+state = world.state()
+while True:
+	time.sleep(1)
+	state, reward = world.take_action(Gridworld.Direction.get_direction_from_number(agent.action(state)))
+	world.draw()
+'''
