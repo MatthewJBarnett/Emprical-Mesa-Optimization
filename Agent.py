@@ -1,4 +1,4 @@
-from Environment.envs.Gridworld import Direction, ChestsAndKeys
+from Environment.envs.Gridworld import ChestsAndKeys, Direction
 import numpy as np
 
 class Agent:
@@ -87,6 +87,61 @@ class NeuralNetAgent(Agent):
 		prediction = self.model.predict(ChestsAndKeys.embed(state))
 		return np.random.choice(5, size = 1, p = prediction)[0]
 		
+class GreedyAgent(Agent):
+	"""
+	Defines an agent that goes to the nearest key if it doesn't have one, and goes to the nearest chest if it has a key.
+	"""
+	def __init__(self, state):
+		super().__init__(state[0])
+	
+	def get_all_pos(self, state, tile_type):
+		""" Returns all the positions where there is a tile_type """
+		state_size = len(state[0])
+		grid = state[0]
+		poses = []
+		for i in range(state_size):
+			for j in range(state_size):
+				if grid[i][j] == tile_type:
+					poses.append((i, j))
+		return poses
+	
+	def get_action(self, state):
+		""" Returns the first step in a path to the next key or chest depending on whether has a key """
+		self.grid = state[0]
+		state_size = len(state[0])
+		next_state = state[1]
+		if state[2] <= 0:
+			key_poses = self.get_all_pos(state, 3)
+			if key_poses != None:
+				all_paths = [self.path_from_to(state, state[1], pos) for pos in key_poses]
+				all_paths = [x for x in all_paths if x != None]
+				if len(all_paths) > 0:
+					shortest_path = min(all_paths, key = lambda t: t[1])
+					next_state = shortest_path[0][1]
+		else:
+			chest_poses = self.get_all_pos(state, 2)
+			if chest_poses != None:
+				all_paths = [self.path_from_to(state, state[1], pos) for pos in chest_poses]
+				all_paths = [x for x in all_paths if x != None]
+				if len(all_paths) > 0:
+					shortest_path = min(all_paths, key = lambda t: t[1])
+					next_state = shortest_path[0][1]
+		return Direction.add(next_state, (-state[1][0], -state[1][1]))
+	
+	def get_nearest_key_action(self, state):
+		""" Returns the first step in a path to the next key """
+		self.grid = state[0]
+		state_size = len(state[0])
+		next_state = state[1]
+		key_poses = self.get_all_pos(state, 3)
+		if key_poses != None:
+			all_paths = [self.path_from_to(state, state[1], pos) for pos in key_poses]
+			all_paths = [x for x in all_paths if x != None]
+			if len(all_paths) > 0:
+				shortest_path = min(all_paths, key = lambda t: t[1])
+				next_state = shortest_path[0][1]
+		return Direction.add(next_state, (-state[1][0], -state[1][1]))
+		
 class HeuristicAgent(Agent):
 	"""
 	Defines an agent that takes the strategy recommended by a particular implementation 
@@ -151,4 +206,8 @@ class HeuristicAgent(Agent):
 			current_pos = node
 			
 		return trajectory
+	
+	def get_action(self, state):
+		""" Returns the first step in a trajectory called on the state """
+		return self.trajectory(state)[0]
 		

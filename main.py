@@ -2,6 +2,7 @@ import Environment.envs.Gridworld
 #import Agent
 import time
 import Utilities
+import tensorflow as tf
 
 import gym
 from stable_baselines.common.policies import MlpPolicy, CnnPolicy
@@ -10,19 +11,29 @@ from stable_baselines import PPO1
 
 env = gym.make('CK-v0')
 
-model = PPO1(MlpPolicy, env, verbose=0)
-print("Training")
-model.learn(total_timesteps=500000)
-model.save("CK-CNN-1")
+# Custom MLP policy of two layers of size 1024 each with relu activation function
+policy_kwargs = dict(act_fun=tf.nn.relu, net_arch=[1024, 1024])
 
+model = PPO1("MlpPolicy", env, policy_kwargs=policy_kwargs, verbose=0, tensorboard_log=".")
+print("Training")
+model.learn(total_timesteps=20e6)
+model.save("MLP3")
+
+del model
+
+model = PPO1.load("MLP3")
+total_reward = 0
 obs = env.reset(True)
-for i in range(25):
-    action, states = model.predict(obs)
-    obs, rewards, dones, info = env.step(action)
-    env.draw()
-    time.sleep(1.0)
-    
-    
+for j in range(100):
+	for i in range(35):
+		action, states = model.predict(obs)
+		#print(action)
+		obs, rewards, dones, info = env.step(action)
+		env.draw()
+		total_reward += rewards
+		time.sleep(0.25)
+	env.reset(True)
+print(total_reward / 100.0)
     
     
     
