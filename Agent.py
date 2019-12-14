@@ -1,5 +1,6 @@
 from Environment.envs.Gridworld import ChestsAndKeys, Direction
 import numpy as np
+import random
 
 class Agent:
 	"""
@@ -86,6 +87,18 @@ class NeuralNetAgent(Agent):
 		""" Takes an action using the models prediction of the best action """
 		prediction = self.model.predict(ChestsAndKeys.embed(state))
 		return np.random.choice(5, size = 1, p = prediction)[0]
+
+class RandomAgent(Agent):
+	"""
+	Defines an agent that takes random legal actions
+	"""
+	def __init__(self, state):
+		super().__init__(state[0])
+	
+	
+	def get_action(self, state):
+		""" Returns a random legal direction """
+		return random.choice(Direction.free_directions(state[1], state[0]))
 		
 class GreedyAgent(Agent):
 	"""
