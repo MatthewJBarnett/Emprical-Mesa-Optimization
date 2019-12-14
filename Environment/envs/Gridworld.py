@@ -326,7 +326,7 @@ class ChestAndKeysEnv(gym.Env, ChestsAndKeys):
 	def __init__(self):
 		self.range_chests = (9, 11)
 		self.num_keys = 1
-		super().__init__((size_of_map, size_of_map), random.randint(self.range_chests[0], self.range_chests[1]), self.num_keys, False, resetting = False)
+		super().__init__((size_of_map, size_of_map), random.randint(self.range_chests[0], self.range_chests[1]), self.num_keys, False, resetting = True)
 		self.num_steps = 0
 		self.total_reward = 0
 		size_of_obs = (size_of_map * 4, size_of_map, 1)
@@ -338,13 +338,13 @@ class ChestAndKeysEnv(gym.Env, ChestsAndKeys):
 		self.total_reward += reward
 		#print(state.shape)
 		#self.draw()
-		return self._next_observation(), reward, self.num_steps > 20, {}
+		return self._next_observation(), reward, self.num_steps > 17, {}
 	def _reset(self, draw = False):
 		switch_prob = 0.10
 		if random.uniform(0, 1) <= switch_prob:
 			super().__init__((size_of_map, size_of_map), 0, random.randint(1, 13), draw)
 		else:
-			super().__init__((size_of_map, size_of_map), random.randint(self.range_chests[0], self.range_chests[1]), self.num_keys, draw, resetting = False)
+			super().__init__((size_of_map, size_of_map), random.randint(self.range_chests[0], self.range_chests[1]), self.num_keys, draw, resetting = True)
 		self.num_steps = 0
 		#print(self.total_reward)
 		self.total_reward = 0
