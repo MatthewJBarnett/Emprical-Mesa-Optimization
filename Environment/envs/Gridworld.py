@@ -1,6 +1,7 @@
 import random
 import pygame
 import time
+from Utilities import path_from_to, Direction
 
 # Apologies, right now there are some magic numbers and some oddly written code
 # On the agenda are
@@ -36,65 +37,6 @@ class Gridworld:
 		See below for the implementation """
 		raise NotImplementedError
 
-class Direction:
-	"""
-	Defines the available actions for an agent in gridworld
-	Some of this code is copied from 
-	https://github.com/HumanCompatibleAI/learning_biases/blob/master/gridworld.py
-	The next thing to do here is import the class from that file since it's better anyway
-	"""
-	NORTH = (0, -1)
-	SOUTH = (0, 1)
-	WEST = (-1, 0)
-	EAST = (1, 0)
-	STAY = (0, 0)
-	INDEX_TO_DIRECTION = [NORTH, EAST, SOUTH, WEST, STAY]
-	DIRECTION_TO_INDEX = {a:i for i, a in enumerate(INDEX_TO_DIRECTION)}
-	
-	@staticmethod
-	def get_number_from_direction(direction):
-		return Direction.DIRECTION_TO_INDEX[direction]
-
-	@staticmethod
-	def get_direction_from_number(number):
-		return Direction.INDEX_TO_DIRECTION[number]
-	
-	def add(v1, v2):
-		""" Add two vectors"""
-		return (v1[0] + v2[0], v1[1] + v2[1])
-	
-	def multiply(v, scalar):
-		""" Multiply a vector by a scalar"""
-		return (v[0] * scalar, v[1] * scalar)
-	
-	@staticmethod
-	def legal_directions(v, dimensions, jumpsize = 1):
-		""" Returns the legal directions at a tile, given the coordinates of the box
-		and how large of a jump the player is allowed to move in a direction """
-		directions = []
-		if v[0] - jumpsize >= 0:
-			directions += [Direction.multiply(Direction.WEST, jumpsize)]
-		if v[0] + jumpsize < dimensions[0]:
-			directions += [Direction.multiply(Direction.EAST, jumpsize)]
-		if v[1] - jumpsize >= 0:
-			directions += [Direction.multiply(Direction.NORTH, jumpsize)]
-		if v[1] + jumpsize < dimensions[1]:
-			directions += [Direction.multiply(Direction.SOUTH, jumpsize)]
-		return directions
-	
-	@staticmethod
-	def free_directions(pos, grid):
-		""" Returns the directions that you can move to for a given position on a grid 
-		This is specific to gridworlds only"""
-		
-		potential = Direction.legal_directions(pos, (len(grid[0]), len(grid)))
-		free = []
-		for d in potential:
-			adjacent = Direction.add(pos, d)
-			if grid[adjacent[0]][adjacent[1]] != 1:
-				free.append(d)
-		return free
-
 class ChestsAndKeys(Gridworld):
 	"""
 	Defines an gridworld very similar to the one in this doc:
@@ -107,12 +49,14 @@ class ChestsAndKeys(Gridworld):
 		super().__init__(dimensions)
 		self.generate_maze()
 		self.tilenames += ['wall', 'chest', 'key']
+		self.agent_pos = (-1, -1)
 		self.place_items(num_chests, 2)
 		self.place_items(num_keys, 3)
 		self.dimensions = dimensions
 		self.agent_pos = self.free_position()
 		self.keys_in_inventory = 0
 		self.drawing = drawing
+		self.visited_tiles = []
 		if drawing:
 			SCREEN_DIMENSIONS = (800, 840)
 			self.game_display = pygame.display.set_mode(SCREEN_DIMENSIONS)
@@ -173,7 +117,8 @@ class ChestsAndKeys(Gridworld):
 			rand_x = random.randint(0, self.dimensions[0] - 1)
 			rand_y = random.randint(0, self.dimensions[1] - 1)
 			if self.tiles[rand_x][rand_y] == 0:
-				return (rand_x, rand_y)
+				if not (rand_x == self.agent_pos[0] and rand_y == self.agent_pos[1]):
+					return (rand_x, rand_y)
 	
 	def item_count(self, item_index):
 		""" Counts the number of items on the grid right now given the item index """
@@ -194,23 +139,27 @@ class ChestsAndKeys(Gridworld):
 		
 		# If the agent takes an illegal action, stay in the current position
 		if action not in Direction.free_directions(self.agent_pos, self.tiles):
-			return (self.state(), -0.05)
+			return (self.state(), -0.30)
 		
 		self.agent_pos = new_pos
+		total_reward = 0.0
 		
 		# If the agent steps on a chest and has at least one key, reward the agent
 		stepped_on_tile = self.tiles[new_pos[0]][new_pos[1]]
 		if stepped_on_tile == 2 and self.keys_in_inventory > 0:
 				self.keys_in_inventory -= 1
 				self.tiles[new_pos[0]][new_pos[1]] = 0
-				return (self.state(), 1.0)
+				self.place_items(1, 2)
+				total_reward += 1.0
+				return (self.state(), total_reward)
 				
-		# If the agent steps on a key, add it to its inventory
+		# If the agent steps on a key, add it to its inventory and put another key on the grid
 		elif stepped_on_tile == 3:
 			self.keys_in_inventory += 1
 			self.tiles[new_pos[0]][new_pos[1]] = 0
+			self.place_items(1, 3)
 			
-		return (self.state(), 0.0)
+		return (self.state(), total_reward)
 						
 	def draw(self):
 		""" Draws the state of the grid """
@@ -261,6 +210,104 @@ class ChestsAndKeys(Gridworld):
 			print(line)
 		print("Agent is at ", self.agent_pos)
 		print("Number of keys: ", self.keys_in_inventory)
+
+class ChestsAndKeysSpecial(ChestsAndKeys):
+	def __init__(self, obs_window, state, drawing = False):
+		self.grid = state[0]
+		self.obs_window = obs_window
+		super().__init__((len(self.grid), len(self.grid)), 0, 0, drawing)
+		for i in range(len(self.grid)):
+			for j in range(len(self.grid)):
+				self.tiles[i][j] = self.grid[i][j]
+		self.agent_pos = state[1]
+		self.keys_in_inventory = state[2]
+		if drawing:
+			SCREEN_DIMENSIONS = (800, 840)
+			self.sprite_size = int(SCREEN_DIMENSIONS[0] / self.obs_window)
+			def load(name):
+				return pygame.transform.scale(pygame.image.load('Resources/' + name), \
+								(self.sprite_size, self.sprite_size))
+			self.key_sprite = load('key.png')
+			self.chest_sprite = load('chest.png')
+			self.wall_sprite = load('wall.png')
+			self.floor_sprite = load('floor.png')
+			self.agent_sprite = load('agent.png')
+			self.tile_to_sprite = [self.floor_sprite, self.wall_sprite, self.chest_sprite, self.key_sprite]
+			pygame.font.init()
+			self.font = pygame.font.Font("Resources/FreeSans.ttf", 30)
+				
+	def get_all_pos(self, state, tile_type):
+		""" Returns all the positions where there is a tile_type """
+		state_size = len(state[0])
+		grid = state[0]
+		poses = []
+		for i in range(state_size):
+			for j in range(state_size):
+				if grid[i][j] == tile_type:
+					poses.append((i, j))
+		return poses
+	
+	def lies_out_of_box(self, coordinates, upper_left, size_of_box):
+		return coordinates[0] < upper_left[0] or coordinates[1] < upper_left[1] or \
+				coordinates[0] >= upper_left[0] + size_of_box or coordinates[1] >= upper_left[1] + size_of_box
+		
+	def state(self):
+		""" Returns the current state of the environment, 
+		represented as a multidimensional numerical array.
+		Since this is the special Chest and Keys environment, it actually shows a window of size self.obs_window
+		It projects non-visible objects onto its perhiphery on the last step of the shortest path to the object 
+		on the tile that leaves the current window."""
+		upper_left = [self.agent_pos[0] - self.obs_window // 2, self.agent_pos[1] - self.obs_window // 2]
+		if self.agent_pos[0] < self.obs_window // 2:
+			upper_left[0] = 0
+		if self.agent_pos[1] < self.obs_window // 2:
+			upper_left[1] = 0
+		if self.agent_pos[0] >= len(self.grid) - self.obs_window // 2:
+			upper_left[0] = len(self.grid) - self.obs_window
+		if self.agent_pos[1] >= len(self.grid) - self.obs_window // 2:
+			upper_left[1] = len(self.grid) - self.obs_window
+			
+		window = [[self.tiles[y + upper_left[0]][x + upper_left[1]] for x in range(self.obs_window)] for y in range(self.obs_window)]
+		state = (self.tiles, self.agent_pos, self.keys_in_inventory)
+		key_poses = self.get_all_pos(state, 3)
+		chest_poses = self.get_all_pos(state, 2)
+		all_key_paths = [path_from_to(state, self.agent_pos, pos, self.grid) for pos in key_poses]
+		all_chest_paths = [path_from_to(state, self.agent_pos, pos, self.grid) for pos in chest_poses]
+		for path in all_key_paths:
+			key_pos = path[0][-1]
+			if self.lies_out_of_box(key_pos, upper_left, self.obs_window):
+				last_pos = path[0][0]
+				for pos in path[0]:
+					if self.lies_out_of_box(pos, upper_left, self.obs_window):
+						if random.randint(0, 1) == 0:
+							window[last_pos[0] - upper_left[0]][last_pos[1] - upper_left[1]] = 3
+						break
+					last_pos = pos
+		
+		for path in all_chest_paths:
+			chest_pos = path[0][-1]
+			if self.lies_out_of_box(chest_pos, upper_left, self.obs_window):
+				last_pos = path[0][0]
+				for pos in path[0]:
+					if self.lies_out_of_box(pos, upper_left, self.obs_window):
+						if random.randint(0, 1) == 0:
+							window[last_pos[0] - upper_left[0]][last_pos[1] - upper_left[1]] = 2
+						break
+					last_pos = pos
+		return (window, Direction.add(self.agent_pos, (-upper_left[0], -upper_left[1])), self.keys_in_inventory)
+	
+	def draw(self):
+		""" Draws the state of the grid """
+		self.game_display.fill((255, 255, 255))
+		for x in range(self.obs_window):
+			for y in range(self.obs_window):
+				self.game_display.blit(self.tile_to_sprite[self.state()[0][x][y]], \
+						(x * self.sprite_size, y * self.sprite_size + 40))
+		self.game_display.blit(self.agent_sprite, \
+			(self.state()[1][0] * self.sprite_size, self.state()[1][1] * self.sprite_size + 40))
+		text = self.font.render("Number of keys: " + str(self.keys_in_inventory), True, (0, 128, 0))
+		self.game_display.blit(text, (0, 0))
+		pygame.display.flip()
 			
 import gym
 from gym import error, spaces, utils
@@ -268,29 +315,38 @@ from gym.utils import seeding
 from stable_baselines.common.vec_env import VecEnv
 
 size_of_map = 5
+num_chests = 8 # 9, 11
+num_keys = 1 # 1
 
 class ChestAndKeysEnv(gym.Env, ChestsAndKeys):
 	metadata = {'render.modes': ['human']}
 	def __init__(self):
-		super().__init__((size_of_map, size_of_map), 3, 2, False)
+		self.range_chests = (9, 11)
+		self.num_keys = 1
+		super().__init__((size_of_map, size_of_map), random.randint(self.range_chests[0], self.range_chests[1]), self.num_keys, False)
 		self.num_steps = 0
-		self.total_reward = 0		
+		self.total_reward = 0
 		size_of_obs = (size_of_map * 4, size_of_map, 1)
 		self.observation_space = spaces.Box(low=0.0, high=3.0, shape=size_of_obs)
 		self.action_space = spaces.Discrete(4)
-	def _step(self, action):
+	def _step(self, action_num):
 		self.num_steps += 1
-		state, reward = super().take_action(Direction.get_direction_from_number(action))
+		state, reward = super().take_action(Direction.get_direction_from_number(action_num))
 		self.total_reward += reward
-		image = self.embed(state)
 		#print(state.shape)
 		#self.draw()
-		return image, reward, self.num_steps > 20, {}
+		return self._next_observation(), reward, self.num_steps > 20, {}
 	def _reset(self, draw = False):
-		super().__init__((size_of_map, size_of_map), 3, 2, draw)
+		switch_prob = 0.10
+		if random.uniform(0, 1) <= switch_prob:
+			super().__init__((size_of_map, size_of_map), 0, random.randint(1, 13), draw)
+		else:
+			super().__init__((size_of_map, size_of_map), random.randint(self.range_chests[0], self.range_chests[1]), self.num_keys, draw)
 		self.num_steps = 0
 		#print(self.total_reward)
 		self.total_reward = 0
+		return self._next_observation()
+	def _next_observation(self):
 		return self.embed(self.state())
 	def _render(self, mode='human'):
 		super.draw()
