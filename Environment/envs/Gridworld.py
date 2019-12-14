@@ -45,15 +45,16 @@ class ChestsAndKeys(Gridworld):
 	The only difference is that here is that I have taken the liberty of 
 	implementing some free parameters, such as how the maze is instantiated.
 	"""
-	def __init__(self, dimensions, num_chests, num_keys, drawing = False):
+	def __init__(self, dimensions, num_chests, num_keys, drawing = False, resetting = True):
 		super().__init__(dimensions)
 		self.generate_maze()
+		self.resetting = resetting
 		self.tilenames += ['wall', 'chest', 'key']
 		self.agent_pos = (-1, -1)
+		self.agent_pos = self.free_position()
 		self.place_items(num_chests, 2)
 		self.place_items(num_keys, 3)
 		self.dimensions = dimensions
-		self.agent_pos = self.free_position()
 		self.keys_in_inventory = 0
 		self.drawing = drawing
 		self.visited_tiles = []
@@ -149,7 +150,8 @@ class ChestsAndKeys(Gridworld):
 		if stepped_on_tile == 2 and self.keys_in_inventory > 0:
 				self.keys_in_inventory -= 1
 				self.tiles[new_pos[0]][new_pos[1]] = 0
-				self.place_items(1, 2)
+				if self.resetting:
+					self.place_items(1, 2)
 				total_reward += 1.0
 				return (self.state(), total_reward)
 				
@@ -157,7 +159,8 @@ class ChestsAndKeys(Gridworld):
 		elif stepped_on_tile == 3:
 			self.keys_in_inventory += 1
 			self.tiles[new_pos[0]][new_pos[1]] = 0
-			self.place_items(1, 3)
+			if self.resetting:
+				self.place_items(1, 3)
 			
 		return (self.state(), total_reward)
 						
@@ -212,10 +215,10 @@ class ChestsAndKeys(Gridworld):
 		print("Number of keys: ", self.keys_in_inventory)
 
 class ChestsAndKeysSpecial(ChestsAndKeys):
-	def __init__(self, obs_window, state, drawing = False):
+	def __init__(self, obs_window, state, drawing = False, resetting = False):
 		self.grid = state[0]
 		self.obs_window = obs_window
-		super().__init__((len(self.grid), len(self.grid)), 0, 0, drawing)
+		super().__init__((len(self.grid), len(self.grid)), 0, 0, drawing, resetting)
 		for i in range(len(self.grid)):
 			for j in range(len(self.grid)):
 				self.tiles[i][j] = self.grid[i][j]
@@ -321,9 +324,9 @@ num_keys = 1 # 1
 class ChestAndKeysEnv(gym.Env, ChestsAndKeys):
 	metadata = {'render.modes': ['human']}
 	def __init__(self):
-		self.range_chests = (9, 11)
+		self.range_chests = (0, 0)
 		self.num_keys = 1
-		super().__init__((size_of_map, size_of_map), random.randint(self.range_chests[0], self.range_chests[1]), self.num_keys, False)
+		super().__init__((size_of_map, size_of_map), random.randint(self.range_chests[0], self.range_chests[1]), self.num_keys, False, resetting = False)
 		self.num_steps = 0
 		self.total_reward = 0
 		size_of_obs = (size_of_map * 4, size_of_map, 1)
@@ -341,7 +344,7 @@ class ChestAndKeysEnv(gym.Env, ChestsAndKeys):
 		if random.uniform(0, 1) <= switch_prob:
 			super().__init__((size_of_map, size_of_map), 0, random.randint(1, 13), draw)
 		else:
-			super().__init__((size_of_map, size_of_map), random.randint(self.range_chests[0], self.range_chests[1]), self.num_keys, draw)
+			super().__init__((size_of_map, size_of_map), random.randint(self.range_chests[0], self.range_chests[1]), self.num_keys, draw, resetting = False)
 		self.num_steps = 0
 		#print(self.total_reward)
 		self.total_reward = 0
