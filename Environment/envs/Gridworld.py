@@ -324,7 +324,7 @@ num_keys = 1 # 1
 class ChestAndKeysEnv(gym.Env, ChestsAndKeys):
 	metadata = {'render.modes': ['human']}
 	def __init__(self):
-		self.range_chests = (0, 0)
+		self.range_chests = (9, 11)
 		self.num_keys = 1
 		super().__init__((size_of_map, size_of_map), random.randint(self.range_chests[0], self.range_chests[1]), self.num_keys, False, resetting = False)
 		self.num_steps = 0
